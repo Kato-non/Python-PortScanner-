@@ -250,6 +250,8 @@ def run():
                 if PORTS > 65535:
                     raise CustomError('[magenta]There are only [cyan]65535 [magenta]ports.')
             elif type(PORTS) == list:
+                if min(PORTS) < 1:
+                    raise CustomError('Values less than 1 are not allowed.')
                 no_duplicates = set(PORTS) # Eliminate duplicates from the list.
                 PORTS = list(no_duplicates) # Convert the set back to a list.
                 maxnum = max(PORTS)
