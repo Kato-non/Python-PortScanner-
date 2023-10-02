@@ -47,8 +47,8 @@ protocols = {
 openports = [] # List that will contain the open ports found.
 count = 0 # Count for the checkIP() function.
 except_count = 0 # Count for the exception limit to display in the scanPorts() function.
-portCount = 0
-missed_ports = 0
+portCount = 0 # Counting the ports that are being scanned.
+missed_ports = 0 # Counting the ports that are likely not scanned.
 
 def help():
     help = '[blue]Usage: [yellow]QuickPyScan.py [cyan]-p1-1024, -p- or -p80,443 Ip-adress -t0.5(Timeout-optional) -TH400(Threads-optional)'
@@ -181,91 +181,90 @@ def openPortsCheck(timeout):
     
 
 def run():
-    try:
-        with Progress() as progress:
-            handled_args = ['-h', '--help', '-p-', '-p', '-t', '-TH'] # List of allowed arguments.
-            HOST = None
-            PORTS = None
-            timeout = None
-            THREAD_LIMIT = 400 # Default limit of concurrent threads.
-            someports = None
+    try:       
+        handled_args = ['-h', '--help', '-p-', '-p', '-t', '-TH'] # List of allowed arguments.
+        HOST = None
+        PORTS = None
+        timeout = None
+        THREAD_LIMIT = 400 # Default limit of concurrent threads.
+        someports = None
 
-             # Count the number of times certain arguments are repeated.
-            t_count = 0
-            th_count = 0
-            p_count = 0
+        # Count the number of times certain arguments are repeated.
+        t_count = 0
+        th_count = 0
+        p_count = 0
 
-             # Iterate over all received arguments to check for errors, etc.
-            for arg in sys.argv[1:]:
-                if checkIP(arg):
-                    HOST = arg
-                    continue
-                elif '-p' in arg:
-                    PORTS = portFilter(arg)
-                    if PORTS and '-p-' in sys.argv[1:]:
-                        raise CustomError('[cyan]-p- -p [yellow]Arguments cannot be repeated.')
-                    p_count += 1
-                    continue
-                elif '-t' in arg:
-                    timeout = timeFilter(arg)
-                    t_count += 1
-                    continue
-                elif '-TH' in arg:
-                    arg = arg.replace('-TH', '')
-                    if arg == '' or int(arg) < 2:
-                        raise CustomError('[cyan]-TH [yellow] Please choose a valid thread count. [magenta] Minimum allowed value: [green]2.')
-                    else:
-                        THREAD_LIMIT = int(arg)
-                        th_count += 1
-                        continue
-
-                if arg in handled_args:
-                    continue
+        # Iterate over all received arguments to check for errors, etc.
+        for arg in sys.argv[1:]:
+            if checkIP(arg):
+                HOST = arg
+                continue
+            elif '-p' in arg:
+                PORTS = portFilter(arg)
+                if PORTS and '-p-' in sys.argv[1:]:
+                    raise CustomError('[cyan]-p- -p [yellow]Arguments cannot be repeated.')
+                p_count += 1
+                continue
+            elif '-t' in arg:
+                timeout = timeFilter(arg)
+                t_count += 1
+                continue
+            elif '-TH' in arg:
+                arg = arg.replace('-TH', '')
+                if arg == '' or int(arg) < 2:
+                    raise CustomError('[cyan]-TH [yellow] Please choose a valid thread count. [magenta] Minimum allowed value: [green]2.')
                 else:
-                    raise ValueError
-                
-            # Check that arguments are not repeated.
-            if t_count > 1 or th_count > 1 or p_count >1:
-                raise CustomError('[red]arg [yellow]Arguments cannot be repeated.')
+                    THREAD_LIMIT = int(arg)
+                    th_count += 1
+                    continue
 
-            # Verify if the user wishes to see the usage guide or if he uses the argument -p-.
-            if '-h' in sys.argv or '--help' in sys.argv:
-                print(info())
-                sys.exit(1)
-            elif '-p-' in sys.argv and PORTS == None:
-                PORTS = range(1, 65536)
+            if arg in handled_args:
+                continue
+            else:
+                raise ValueError
             
-            # Verify that there are no ports greater than 65535 and assign value to someports.
-            if type(PORTS) == range:
-                try:
-                    if len(PORTS) > 65535:
-                        raise CustomError('[magenta]There are only [cyan]65535 [magenta]ports..')
-                    elif min(PORTS) <= min(commonPorts) and max(PORTS) >= max(commonPorts):
-                        someports = commonPorts
-                    elif min(PORTS) <= min(commonPorts) and max(PORTS) >= max(commonPorts[:10]):
-                        someports = commonPorts[:10]
-                except ValueError:
-                    raise CustomError(f'Port range [cyan]{PORTS.start}-{PORTS.stop - 1} [yellow]is invalid. [magenta]Please start from lower to higher.')
-            elif type(PORTS) == int:
-                if PORTS > 65535:
-                    raise CustomError('[magenta]There are only [cyan]65535 [magenta]ports.')
-            elif type(PORTS) == list:
-                if min(PORTS) < 1:
-                    raise CustomError('Values less than 1 are not allowed.')
-                no_duplicates = set(PORTS) # Eliminate duplicates from the list.
-                PORTS = list(no_duplicates) # Convert the set back to a list.
-                maxnum = max(PORTS)
-                if maxnum > 65535:
-                    raise CustomError('[magenta]There are only [cyan]65535 [magenta]ports.')
+        # Check that arguments are not repeated.
+        if t_count > 1 or th_count > 1 or p_count >1:
+            raise CustomError('[red]arg [yellow]Arguments cannot be repeated.')
 
-            # Verify that an IP or port exists.
-            if HOST == None or PORTS == None:
-                raise CustomError('[magenta]Please enter a valid [yellow]IP-address [magenta]or [yellow]Port.')
+        # Verify if the user wishes to see the usage guide or if he uses the argument -p-.
+        if '-h' in sys.argv or '--help' in sys.argv:
+            print(info())
+            sys.exit(1)
+        elif '-p-' in sys.argv and PORTS == None:
+            PORTS = range(1, 65536)
+        
+        # Verify that there are no ports greater than 65535 and assign value to someports.
+        if type(PORTS) == range:
+            try:
+                if len(PORTS) > 65535:
+                    raise CustomError('[magenta]There are only [cyan]65535 [magenta]ports..')
+                elif min(PORTS) <= min(commonPorts) and max(PORTS) >= max(commonPorts):
+                    someports = commonPorts
+                elif min(PORTS) <= min(commonPorts) and max(PORTS) >= max(commonPorts[:10]):
+                    someports = commonPorts[:10]
+            except ValueError:
+                raise CustomError(f'Port range [cyan]{PORTS.start}-{PORTS.stop - 1} [yellow]is invalid. [magenta]Please start from lower to higher.')
+        elif type(PORTS) == int:
+            if PORTS > 65535:
+                raise CustomError('[magenta]There are only [cyan]65535 [magenta]ports.')
+        elif type(PORTS) == list:
+            if min(PORTS) < 1:
+                raise CustomError('Values less than 1 are not allowed.')
+            no_duplicates = set(PORTS) # Eliminate duplicates from the list.
+            PORTS = list(no_duplicates) # Convert the set back to a list.
+            maxnum = max(PORTS)
+            if maxnum > 65535:
+                raise CustomError('[magenta]There are only [cyan]65535 [magenta]ports.')
 
-            thread_list = [] # List where concurrent threads will be saved.                             
+        # Verify that an IP or port exists.
+        if HOST == None or PORTS == None:
+            raise CustomError('[magenta]Please enter a valid [yellow]IP-address [magenta]or [yellow]Port.')
+
+        thread_list = [] # List where concurrent threads will be saved.
+
+        with Progress() as progress:
             task = progress.add_task('[cyan]Scaning...', total=len(PORTS)) # Add a task to our progress bar.
-
-
             if someports: # If true, scan some common ports first for quick results.   
                 for port in someports:
                     while threading.active_count() > THREAD_LIMIT:
